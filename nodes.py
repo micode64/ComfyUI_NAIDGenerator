@@ -6,6 +6,7 @@ import zipfile
 
 from .utils import *
 
+
 TOOLTIP_LIMIT_OPUS_FREE = "Limit image size and steps for free generation by Opus."
 
 class PromptToNAID:
@@ -40,7 +41,7 @@ class ModelOption:
     def INPUT_TYPES(s):
         return {
             "required": {
-                "model": (["safe-diffusion", "nai-diffusion", "nai-diffusion-furry", "nai-diffusion-2", "nai-diffusion-furry-3", "nai-diffusion-3", "nai-diffusion-4-curated-preview", "nai-diffusion-4-full"], { "default": "nai-diffusion-4-full" }),
+                "model": (["nai-diffusion-2", "nai-diffusion-furry-3", "nai-diffusion-3", "nai-diffusion-4-full", ], { "default": "nai-diffusion-4-full" }), #"nai-diffusion-4-curated" is not available
             },
             "optional": { "option": ("NAID_OPTION",) },
         }
@@ -130,7 +131,7 @@ class NetworkOption:
     def set_option(self, ignore_errors, timeout_sec, retry, option=None):
         option = copy.deepcopy(option) if option else {}
         option["ignore_errors"] = ignore_errors
-        option["timeout"] = timeout_sec
+        option["timeout_sec"] = timeout_sec
         option["retry"] = retry
         return (option,)
 
@@ -144,31 +145,34 @@ class GenerateNAID:
     def INPUT_TYPES(s):
         return {
             "required": {
-                "limit_opus_free": ("BOOLEAN", { "default": True, "tooltip": TOOLTIP_LIMIT_OPUS_FREE }),
-                "width": ("INT", { "default": 832, "min": 64, "max": 1600, "step": 64, "display": "number" }),
-                "height": ("INT", { "default": 1216, "min": 64, "max": 1600, "step": 64, "display": "number" }),
-                "positive": ("STRING", { "default": ", best quality, amazing quality, very aesthetic, absurdres", "multiline": True, "dynamicPrompts": False }),
-                "negative": ("STRING", { "default": "lowres", "multiline": True, "dynamicPrompts": False }),
-                "steps": ("INT", { "default": 28, "min": 0, "max": 50, "step": 1, "display": "number" }),
-                "cfg": ("FLOAT", { "default": 5.0, "min": 0.0, "max": 10.0, "step": 0.1, "display": "number" }),
-                "variety" : ("BOOLEAN", { "default": False }),
-                "decrisper": ("BOOLEAN", { "default": False }),
-                "smea": (["none", "SMEA", "SMEA+DYN"], { "default": "none" }),
-                "sampler": (["k_euler", "k_euler_ancestral", "k_dpmpp_2s_ancestral", "k_dpmpp_2m_sde", "k_dpmpp_2m", "k_dpmpp_sde", "ddim"], { "default": "k_euler" }),
-                "scheduler": (["native", "karras", "exponential", "polyexponential"], { "default": "native" }),
-                "seed": ("INT", { "default": 0, "min": 0, "max": 9999999999, "step": 1, "display": "number" }),
-                "uncond_scale": ("FLOAT", { "default": 1.0, "min": 0.0, "max": 1.5, "step": 0.05, "display": "number" }),
-                "cfg_rescale": ("FLOAT", { "default": 0.0, "min": 0.0, "max": 1.0, "step": 0.02, "display": "number" }),
-                "keep_alpha": ("BOOLEAN", { "default": True, "tooltip": "Disable to further process output images locally" }),
+                "limit_opus_free": ("BOOLEAN", {"default": True, "tooltip": TOOLTIP_LIMIT_OPUS_FREE}),
+                "width": ("INT", {"default": 832, "min": 64, "max": 1600, "step": 64, "display": "number"}),
+                "height": ("INT", {"default": 1216, "min": 64, "max": 1600, "step": 64, "display": "number"}),
+                "positive": ("STRING", {"default": ", best quality, amazing quality, very aesthetic, absurdres", "multiline": True, "dynamicPrompts": False}),
+                "negative": ("STRING", {"default": "lowres", "multiline": True, "dynamicPrompts": False}),
+                "use_coords": ("BOOLEAN", {"default": True, "tooltip": "Use character coordinate information"}),
+                "use_order": ("BOOLEAN", {"default": True}),
+                "legacy_uc": ("BOOLEAN", {"default": False, "tooltip": "Use legacy UC"}),
+                "steps": ("INT", {"default": 28, "min": 0, "max": 50, "step": 1, "display": "number"}),
+                "cfg": ("FLOAT", {"default": 5.0, "min": 0.0, "max": 10.0, "step": 0.1, "display": "number"}),
+                "variety": ("BOOLEAN", {"default": False}),
+                "decrisper": ("BOOLEAN", {"default": False}),
+                "smea": (["none", "SMEA", "SMEA+DYN"], {"default": "none"}),
+                "sampler": (["k_euler", "k_euler_ancestral", "k_dpmpp_2s_ancestral", "k_dpmpp_2m_sde", "k_dpmpp_2m", "k_dpmpp_sde", "ddim"], {"default": "k_euler"}),
+                "scheduler": (["native", "karras", "exponential", "polyexponential"], {"default": "native"}),
+                "seed": ("INT", {"default": 0, "min": 0, "max": 9999999999, "step": 1, "display": "number"}),
+                "uncond_scale": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.5, "step": 0.05, "display": "number"}),
+                "cfg_rescale": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.02, "display": "number"}),
+                "keep_alpha": ("BOOLEAN", {"default": True, "tooltip": "Disable to further process output images locally"}),
             },
-            "optional": { "option": ("NAID_OPTION",) },
+            "optional": {"option": ("NAID_OPTION",)},
         }
 
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "generate"
     CATEGORY = "NovelAI"
 
-    def generate(self, limit_opus_free, width, height, positive, negative, steps, cfg, decrisper, variety, smea, sampler, scheduler, seed, uncond_scale, cfg_rescale, keep_alpha, option=None):
+    def generate(self, limit_opus_free, width, height, positive, negative, steps, cfg, decrisper, variety, smea, sampler, scheduler, seed, uncond_scale, cfg_rescale, keep_alpha, use_coords, use_order, legacy_uc, option=None):
         width, height = calculate_resolution(width*height, (width, height))
 
         # ref. novelai_api.ImagePreset
@@ -188,7 +192,6 @@ class GenerateNAID:
             "dynamic_thresholding": decrisper,
             "skip_cfg_above_sigma": None,
             "controlnet_strength": 1.0,
-            "legacy": False,
             "add_original_image": False,
             "cfg_rescale": cfg_rescale,
             "noise_schedule": scheduler,
@@ -201,8 +204,9 @@ class GenerateNAID:
             "reference_strength_multiple": [],
             "extra_noise_seed": seed,
             "v4_prompt": {
-                "use_coords": False,
-                "use_order": False,
+                "use_coords": use_coords,
+                "use_order": use_order,
+                "legacy_uc": legacy_uc,
                 "caption": {
                     "base_caption": positive,
                     "char_captions": []
@@ -247,6 +251,9 @@ class GenerateNAID:
             # Handle V4 options
             if "v4_prompt" in option:
                 params["v4_prompt"].update(option["v4_prompt"])
+
+            if "v4_negative_prompt" in option:
+                params["v4_negative_prompt"].update(option["v4_negative_prompt"])
 
         timeout = option["timeout"] if option and "timeout" in option else None
         retry = option["retry"] if option and "retry" in option else None
@@ -465,22 +472,8 @@ class DeclutterAugment:
     CATEGORY = "NovelAI/director_tools"
     def augment(self, image, limit_opus_free, ignore_errors):
         return base_augment(self.access_token, self.output_dir, limit_opus_free, ignore_errors, "declutter", image)
-class V4BasePrompt:
-    @classmethod
-    def INPUT_TYPES(s):
-        return {
-            "required": {
-                "base_caption": ("STRING", { "multiline": True }),
-            }
-        }
 
-    RETURN_TYPES = ("STRING",)  # Changed from NAID_OPTION to STRING
-    FUNCTION = "convert"        # Changed from set_option to convert
-    CATEGORY = "NovelAI/v4"
-    def convert(self, base_caption):
-        return (base_caption,)  # Simply returns the caption as a string
-
-"""class V4PromptConfig:
+class V4PromptConfig:
     @classmethod
     def INPUT_TYPES(s):
         return {
@@ -502,54 +495,124 @@ class V4BasePrompt:
         option["v4_prompt"]["use_order"] = use_order
         return (option,)
 
-class V4CharacterCaption:
+class CharacterNAI:
     @classmethod
     def INPUT_TYPES(s):
         return {
             "required": {
-                "char_caption": ("STRING", { "multiline": True }),
-                "x": ("FLOAT", { "default": 0.5, "min": 0.0, "max": 1.0, "step": 0.01 }),
-                "y": ("FLOAT", { "default": 0.5, "min": 0.0, "max": 1.0, "step": 0.01 }),
+                "positive_prompt": ("STRING", {"multiline": True}),
+                "negative_prompt": ("STRING", {"multiline": True, "default": ""}),
+                "x": (["A", "B", "C", "D", "E"], {"default": "C"}),
+                "y": (["1", "2", "3", "4", "5"], {"default": "3"}),
+            }
+        }
+
+    RETURN_TYPES = ("CHARACTER_NAI",)
+    FUNCTION = "create"
+    CATEGORY = "NovelAI/v4"
+
+    def create(self, positive_prompt, x, y, negative_prompt):
+        # Convert x ('A'-'E') and y (1-5) to normalized float (0.0~1.0)
+        x_map = {'A': 0, 'B': 1, 'C': 2, 'D': 3, 'E': 4}
+        x_norm = x_map.get(x, 2) / 4.0
+        y_norm = (int(y) - 1) / 4.0
+        return ({
+            "char_caption": positive_prompt,
+            "centers": [{"x": x_norm, "y": y_norm}],
+            "negative_caption": negative_prompt,
+        },)
+
+class CharacterConcatenateNAI:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "character1": ("CHARACTER_NAI", {"forceInput": True}),
             },
-            "optional": { "option": ("NAID_OPTION",) },
-        }
-
-    RETURN_TYPES = ("NAID_OPTION",)
-    FUNCTION = "set_option"
-    CATEGORY = "NovelAI/v4"
-    def set_option(self, char_caption, x, y, option=None):
-        option = copy.deepcopy(option) if option else {}
-        if "v4_prompt" not in option:
-            option["v4_prompt"] = {
-                "caption": {
-                    "base_caption": "",
-                    "char_captions": []
-                }
-            }
-        
-        char_caption_obj = {
-            "char_caption": char_caption,
-            "centers": [{"x": x, "y": y}]
-        }
-        
-        option["v4_prompt"]["caption"]["char_captions"].append(char_caption_obj)
-        return (option,)
-"""
-class V4NegativePrompt:
-    @classmethod
-    def INPUT_TYPES(s):
-        return {
-            "required": {
-                "negative_caption": ("STRING", { "multiline": True }),
+            "optional": {
+                "character2": ("CHARACTER_NAI", {"forceInput": False}),
+                "character3": ("CHARACTER_NAI", {"forceInput": False}),
+                "character4": ("CHARACTER_NAI", {"forceInput": False}),
+                "character5": ("CHARACTER_NAI", {"forceInput": False}),
+                "character6": ("CHARACTER_NAI", {"forceInput": False}),
             }
         }
 
-    RETURN_TYPES = ("STRING",)
-    FUNCTION = "convert"
+    RETURN_TYPES = ("CHARACTER_LIST_NAI",)
+    FUNCTION = "concat"
     CATEGORY = "NovelAI/v4"
-    def convert(self, negative_caption):
-        return (negative_caption,)
 
+    def concat(self, character1, character2=None, character3=None, character4=None, character5=None, character6=None):
+        # Convert inputs to list and exclude "None"
+        characters = [character1, character2, character3, character4, character5, character6]
+        characters = [c for c in characters if c is not None]
+        return (characters,)
+
+# GenerateNAID node extension: character prompt slots added
+# Add 'characters' to INPUT_TYPES of existing GenerateNAID and internally assemble char_captions in a metadata.yaml structure.
+# Replace existing GenerateNAID.INPUT_TYPES
+
+old_generate_naid_input_types = GenerateNAID.INPUT_TYPES
+
+def new_generate_naid_input_types(s):
+    types = old_generate_naid_input_types()
+    types["required"]["characters"] = ("CHARACTER_LIST_NAI", {"default": [], "forceInput": False, "multiline": True})
+    return types
+GenerateNAID.INPUT_TYPES = classmethod(new_generate_naid_input_types)
+
+# Add 'characters' to INPUT_TYPES of existing GenerateNAID and internally assemble char_captions in a metadata.yaml structure.
+
+old_generate_naid_generate = GenerateNAID.generate
+
+def new_generate_naid_generate(self, *args, **kwargs):
+    # characters is always the last argument
+    import inspect
+    sig = inspect.signature(old_generate_naid_generate)
+    params = list(sig.parameters.keys())
+    # Existing arguments + characters + option
+    option = kwargs.get('option', None)
+    characters = kwargs.get('characters', None)
+    if characters is None and len(args) >= len(params):
+        characters = args[len(params)-1]
+    # Build v4_prompt
+    if option is None:
+        option = {}
+    if characters:
+        # Same structure as metadata.yaml
+        char_captions = []
+        for idx, c in enumerate(characters):
+            centers = c.get("centers", [])
+            # Warn if centers is empty or None
+            if not centers or centers is None or not isinstance(centers, list) or not centers:
+                print(f"[WARN] Character index {idx} centers is empty or invalid: {centers}")
+            else:
+                # If centers is not in [{"x":..., "y":...}] format, fix it
+                if isinstance(centers, dict):
+                    centers = [centers]
+                elif isinstance(centers, list):
+                    # If it's a list but not a list of dicts, fix it
+                    if centers and not isinstance(centers[0], dict):
+                        print(f"[WARN] Unexpected format for centers: {centers}")
+                        centers = [{"x": centers[0], "y": centers[1]}] if len(centers) == 2 else []
+            char_captions.append({
+                "char_caption": c.get("char_caption", ""),
+                "centers": centers
+            })
+        if char_captions:
+            if "v4_prompt" not in option:
+                option["v4_prompt"] = {"caption": {}}
+            if "caption" not in option["v4_prompt"]:
+                option["v4_prompt"]["caption"] = {}
+            option["v4_prompt"]["caption"]["char_captions"] = char_captions
+    # Print option contents before sending to API
+    print("[DEBUG] API送信前 option:", option)
+    kwargs['option'] = option
+    # Remove characters from kwargs
+    if 'characters' in kwargs:
+        del kwargs['characters']
+    return old_generate_naid_generate(self, *args[:len(params)-1], **kwargs)
+
+GenerateNAID.generate = new_generate_naid_generate
 
 NODE_CLASS_MAPPINGS = {
     "GenerateNAID": GenerateNAID,
@@ -566,25 +629,27 @@ NODE_CLASS_MAPPINGS = {
     "ColorizeNAID": ColorizeAugment,
     "EmotionNAID": EmotionAugment,
     "DeclutterNAID": DeclutterAugment,
-    "V4BasePrompt": V4BasePrompt,
-    "V4NegativePrompt": V4NegativePrompt,
+    "V4PromptConfig": V4PromptConfig,
+    "CharacterNAI": CharacterNAI,
+    "CharacterConcatenateNAI": CharacterConcatenateNAI,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "GenerateNAID": "Generate ✒️🅝🅐🅘",
-    "ModelOptionNAID": "ModelOption ✒️🅝🅐🅘",
-    "Img2ImgOptionNAID": "Img2ImgOption ✒️🅝🅐🅘",
-    "InpaintingOptionNAID": "InpaintingOption ✒️🅝🅐🅘",
-    "VibeTransferOptionNAID": "VibeTransferOption ✒️🅝🅐🅘",
-    "NetworkOptionNAID": "NetworkOption ✒️🅝🅐🅘",
-    "MaskImageToNAID": "Convert Mask Image ✒️🅝🅐🅘",
-    "PromptToNAID": "Convert Prompt ✒️🅝🅐🅘",
-    "RemoveBGNAID": "Remove BG ✒️🅝🅐🅘",
-    "LineArtNAID": "LineArt ✒️🅝🅐🅘",
-    "SketchNAID": "Sketch ✒️🅝🅐🅘",
-    "ColorizeNAID": "Colorize ✒️🅝🅐🅘",
-    "EmotionNAID": "Emotion ✒️🅝🅐🅘",
-    "DeclutterNAID": "Declutter ✒️🅝🅐🅘",
-    "V4BasePrompt": "V4 Base Prompt ✒️🅝🅐🅘",
-    "V4NegativePrompt": "V4 Negative Prompt ✒️🅝🅐🅘",
+    "GenerateNAID": "Generate NAI",
+    "ModelOptionNAID": "ModelOption NAI",
+    "Img2ImgOptionNAID": "Img2ImgOption NAI",
+    "InpaintingOptionNAID": "InpaintingOption NAI",
+    "VibeTransferOptionNAID": "VibeTransferOption NAI",
+    "NetworkOptionNAID": "NetworkOption NAI",
+    "MaskImageToNAID": "Convert Mask Image NAI",
+    "PromptToNAID": "Convert Prompt NAI",
+    "RemoveBGNAID": "Remove BG NAI",
+    "LineArtNAID": "LineArt NAI",
+    "SketchNAID": "Sketch NAI",
+    "ColorizeNAID": "Colorize NAI",
+    "EmotionNAID": "Emotion NAI",
+    "DeclutterNAID": "Declutter NAI",
+    "V4PromptConfig": "V4 Prompt Config NAI",
+    "CharacterNAI": "Character NAI",
+    "CharacterConcatenateNAI": "CharacterConcatenate NAI",
 }
