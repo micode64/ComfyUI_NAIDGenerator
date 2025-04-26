@@ -7,7 +7,6 @@ A [ComfyUI](https://github.com/comfyanonymous/ComfyUI) extension for generating 
 ## Installation
 
 - `git clone https://github.com/micode64/ComfyUI_NAIDGenerator` into the `custom_nodes` directory.
-- or 'Install via Git URL' from [Comfyui Manager](https://github.com/ltdrdata/ComfyUI-Manager)
 
 ## Setting up NAI account
 
@@ -31,7 +30,7 @@ The nodes are located at `NovelAI` category.
 
 Simply connect `GenerateNAID` node and `SaveImage` node.
 
-![generate](https://github.com/bedovyy/ComfyUI_NAIDGenerator/assets/GenerateNAID.png)
+![generate](https://github.com/bedovyy/ComfyUI_NAIDGenerator/assets/137917911/1328896d-7d4b-4d47-8ec2-d1c4e8e2561c)
 
 Note that all generated images via `GeneratedNAID` node are saved as `output/NAI_autosave_12345_.png` for keeping original metadata.
 
@@ -73,7 +72,7 @@ Just connect multiple `VibeTransferOptionNAID` nodes to `GenerateNAID` node.
 
 ### ModelOption
 
-The default model of `GenerateNAID` node is `nai-diffusion-3`(NAI Diffusion Anime V3).
+The default model of `GenerateNAID` node is `nai-diffusion-4-full`(NAI Diffusion V4 Full).
 
 If you want to change model, put `ModelOptionNAID` node to `GenerateNAID` node.
 
@@ -154,7 +153,7 @@ See the [examples](#) for more details.
 **Note:**
 - Up to 6 characters can be merged.
 - If no character is provided, the workflow behaves as a standard single-prompt generation.
-- For advanced users: you may inspect the internal structure passed to the API for debugging or extension.
+- For advanced users: you may inspect the internal structure passed to the API for debugging or extension. >> [novelai-image-metadata](https://github.com/NovelAI/novelai-image-metadata)
 
 
 Note: Basic img2img functionality works with V4 preview. For inpainting, the node will automatically use V3 model but can still work on V4-generated images. Vibe transfer will be supported once V4 fully releases.
