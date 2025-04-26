@@ -31,7 +31,7 @@ The nodes are located at `NovelAI` category.
 
 Simply connect `GenerateNAID` node and `SaveImage` node.
 
-![generate](https://github.com/micode64/ComfyUI_NAIDGenerator/assets/GenerateNAID.png)
+![generate](https://github.com/bedovyy/ComfyUI_NAIDGenerator/assets/GenerateNAID.png)
 
 Note that all generated images via `GeneratedNAID` node are saved as `output/NAI_autosave_12345_.png` for keeping original metadata.
 
@@ -125,7 +125,6 @@ model = "nai-diffusion-4-full"
   - The node outputs a dictionary with `char_caption`, `negative_caption`, and `centers` (list of {x, y} dicts).
 - **UI:**
   - The grid UI allows intuitive placement. The selected cell is highlighted for clarity.
-  ![image](https://github.com/micode64/ComfyUI_NAIDGenerator/assets/CharacterNAI.png)
 
 #### CharacterConcatenateNAI Node
 - **Purpose**: Combines up to 6 CharacterNAI nodes into a single character list.
@@ -134,7 +133,6 @@ model = "nai-diffusion-4-full"
 - **How it works:**
   - All provided characters are merged into a list, omitting any empty slots.
   - Output is a `CHARACTER_LIST_NAI` type, suitable for direct connection to the `characters` input of GenerateNAID.
-  ![image](https://github.com/micode64/ComfyUI_NAIDGenerator/assets/CharacterConcatenateNAI.png)
 
 #### Connecting to GenerateNAID
 - The `characters` slot of the `GenerateNAID` node accepts a single CharacterNAI or a CharacterConcatenateNAI node.
