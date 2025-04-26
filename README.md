@@ -1,10 +1,12 @@
+This project is a fork of [bedovyy/ComfyUI_NAIDGenerator](https://github.com/bedovyy/ComfyUI_NAIDGenerator), licensed under GPL-3.0.
+
 # ComfyUI_NAIDGenerator
 
 A [ComfyUI](https://github.com/comfyanonymous/ComfyUI) extension for generating image via NovelAI API.
 
 ## Installation
 
-- `git clone https://github.com/bedovyy/ComfyUI_NAIDGenerator` into the `custom_nodes` directory.
+- `git clone https://github.com/micode64/ComfyUI_NAIDGenerator` into the `custom_nodes` directory.
 - or 'Install via Git URL' from [Comfyui Manager](https://github.com/ltdrdata/ComfyUI-Manager)
 
 ## Setting up NAI account
@@ -29,7 +31,7 @@ The nodes are located at `NovelAI` category.
 
 Simply connect `GenerateNAID` node and `SaveImage` node.
 
-![generate](https://github.com/bedovyy/ComfyUI_NAIDGenerator/assets/137917911/1328896d-7d4b-4d47-8ec2-d1c4e8e2561c)
+![generate](https://github.com/micode64/ComfyUI_NAIDGenerator/assets/GenerateNAID.png)
 
 Note that all generated images via `GeneratedNAID` node are saved as `output/NAI_autosave_12345_.png` for keeping original metadata.
 
@@ -103,67 +105,58 @@ You can find director tools like `LineArtNAID` or `EmotionNAID` on NovelAI > dir
 
 ![augment_example](https://github.com/user-attachments/assets/5833e9fb-f92e-4d53-9069-58ca8503a3e7)
 
-### V4 Support (Preview)
-
-The node now supports NAI's V4 architecture through the nai-diffusion-4-curated-preview model. This is a preview release of V4 with some limitations:
-
-- **Important Notes:**
-  - This is a preview version of V4 and some features are limited
-  - Inpainting will automatically use V3 model (but works with V4-generated images)
-  - Vibe transfer is not yet supported with V4 preview (will be available with full V4 release)
-  - Full V4 feature support will come with the official V4 release
-
 #### New Model Option
 
-NAI Diffusion V4 Curated Preview is now available in the ModelOptionNAID node:
+NAI Diffusion V4 Full is now available in the ModelOptionNAID node:
 
 ```python
-model = "nai-diffusion-4-curated-preview"
+model = "nai-diffusion-4-full"
 ```
 
-#### V4 Prompt Handling
+#### CharacterNAI Node
+- **Purpose**: Defines a single character prompt with explicit position and negative prompt.
+- **Inputs:**
+  - `positive_prompt` (string, multiline): Character's positive prompt.
+  - `negative_prompt` (string, multiline, optional): Character's negative prompt.
+  - `x` (A–E): Column selection on a 5x5 grid (default: C).
+  - `y` (1–5): Row selection on a 5x5 grid (default: 3).
+- **How it works:**
+  - The (x, y) selection is mapped to normalized float coordinates (0.0–1.0) per NovelAI API spec.
+  - The node outputs a dictionary with `char_caption`, `negative_caption`, and `centers` (list of {x, y} dicts).
+- **UI:**
+  - The grid UI allows intuitive placement. The selected cell is highlighted for clarity.
+  ![image](https://github.com/micode64/ComfyUI_NAIDGenerator/assets/CharacterNAI.png)
 
-Two new nodes have been added for V4 prompt handling:
+#### CharacterConcatenateNAI Node
+- **Purpose**: Combines up to 6 CharacterNAI nodes into a single character list.
+- **Inputs:**
+  - `character1` (required), `character2`–`character6` (optional): CharacterNAI nodes.
+- **How it works:**
+  - All provided characters are merged into a list, omitting any empty slots.
+  - Output is a `CHARACTER_LIST_NAI` type, suitable for direct connection to the `characters` input of GenerateNAID.
+  ![image](https://github.com/micode64/ComfyUI_NAIDGenerator/assets/CharacterConcatenateNAI.png)
 
-##### V4BasePrompt
+#### Connecting to GenerateNAID
+- The `characters` slot of the `GenerateNAID` node accepts a single CharacterNAI or a CharacterConcatenateNAI node.
+- Internally, all character prompts are assembled into the `v4_prompt.caption.char_captions` structure as required by NovelAI V4 API.
+- Each character entry includes its prompt, negative prompt, and position.
 
-A node for handling V4 positive prompts:
+#### Technical Details
+- Character positions are always normalized floats (0.0–1.0) for both x and y.
+- The prompt merging logic ensures that character prompts remain separate from the base prompt, following the metadata.yaml structure.
+- The UI grid is implemented in the web extension for intuitive character positioning.
 
-```
-V4BasePrompt -----> positive
-               GenerateNAID
-```
+#### Example Workflow
+1. Create several CharacterNAI nodes with desired prompts and positions.
+2. Combine them using CharacterConcatenateNAI if needed.
+3. Connect the resulting character list to the `characters` input of GenerateNAID.
 
-##### V4NegativePrompt
+See the [examples](#) for more details.
 
-A node for handling V4 negative prompts:
+**Note:**
+- Up to 6 characters can be merged.
+- If no character is provided, the workflow behaves as a standard single-prompt generation.
+- For advanced users: you may inspect the internal structure passed to the API for debugging or extension.
 
-```
-V4NegativePrompt -> negative
-                 GenerateNAID
-```
-
-#### Example V4 Workflow
-
-Here's a basic V4 setup:
-
-```
-V4BasePrompt -----> positive
-V4NegativePrompt -> negative  GenerateNAID
-ModelOption ------> option
-```
-
-#### Work In Progress Features
-
-The following V4 features are currently in development:
-
-```python
-"""
-- V4PromptConfig: Advanced prompt configuration
-  - Coordinate-based prompting
-  - Order-based prompting
-- V4CharacterCaption: Character-specific prompting with positioning
-"""
-```
 
 Note: Basic img2img functionality works with V4 preview. For inpainting, the node will automatically use V3 model but can still work on V4-generated images. Vibe transfer will be supported once V4 fully releases.

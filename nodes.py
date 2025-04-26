@@ -473,28 +473,6 @@ class DeclutterAugment:
     def augment(self, image, limit_opus_free, ignore_errors):
         return base_augment(self.access_token, self.output_dir, limit_opus_free, ignore_errors, "declutter", image)
 
-class V4PromptConfig:
-    @classmethod
-    def INPUT_TYPES(s):
-        return {
-            "required": {
-                "use_coords": ("BOOLEAN", { "default": False }),
-                "use_order": ("BOOLEAN", { "default": False }),
-            },
-            "optional": { "option": ("NAID_OPTION",) },
-        }
-
-    RETURN_TYPES = ("NAID_OPTION",)
-    FUNCTION = "set_option"
-    CATEGORY = "NovelAI/v4"
-    def set_option(self, use_coords, use_order, option=None):
-        option = copy.deepcopy(option) if option else {}
-        if "v4_prompt" not in option:
-            option["v4_prompt"] = {}
-        option["v4_prompt"]["use_coords"] = use_coords
-        option["v4_prompt"]["use_order"] = use_order
-        return (option,)
-
 class CharacterNAI:
     @classmethod
     def INPUT_TYPES(s):
@@ -629,7 +607,6 @@ NODE_CLASS_MAPPINGS = {
     "ColorizeNAID": ColorizeAugment,
     "EmotionNAID": EmotionAugment,
     "DeclutterNAID": DeclutterAugment,
-    "V4PromptConfig": V4PromptConfig,
     "CharacterNAI": CharacterNAI,
     "CharacterConcatenateNAI": CharacterConcatenateNAI,
 }
@@ -649,7 +626,6 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "ColorizeNAID": "Colorize NAI",
     "EmotionNAID": "Emotion NAI",
     "DeclutterNAID": "Declutter NAI",
-    "V4PromptConfig": "V4 Prompt Config NAI",
     "CharacterNAI": "Character NAI",
     "CharacterConcatenateNAI": "CharacterConcatenate NAI",
 }
